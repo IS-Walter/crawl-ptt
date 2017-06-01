@@ -10,21 +10,20 @@ function parsePage ($, el) {
   let end = str.indexOf('.html')
   let start = str.indexOf('index')
   totalPage = parseInt(str.slice(start + 5, end))
+  console.log('total page =', totalPage)
 }
 
 function getO2Index () {
   result = []
   request({
-    url: 'https://www.ptt.cc/bbs/AllTogether/index.html',
+    url: 'https://www.ptt.cc/bbs/AllTogether/index3456.html',
     method: 'GET'
   }, function (e, r, b) { /* Callback 函式 */
     /* e: 錯誤代碼 */
     /* b: 傳回的資料內容 */
     if (!e) {
       $ = cheerio.load(b)
-      let titles = $('.r-ent .title')
-      let authors = $('.r-ent .author')
-      let hrefs = $('.r-ent .title a')
+      let articles = $('.r-ent')
       let links = $('#action-bar-container .btn-group-paging a')
 
       // parse total pages
@@ -34,18 +33,18 @@ function getO2Index () {
         }
       })
 
-      for (let i = 0; i < titles.length; i++) {
+      for (let i = 0; i < articles.length; i++) {
+        let a = articles[i]
         result.push({
-          title: $(titles[i]).text().trim(),
-          author: $(authors[i]).text().trim(),
-          href: $(hrefs[i]).attr('href')
+          title: $(a).children('.title').text().trim(),
+          author: $(a).children('.meta').children('.author').text().trim(),
+          href: $(a).children('.title').children('a').attr('href')
         })
       }
       // leave the 徵男
       result = result.filter(r => {
         return r.title.indexOf('[徵男]') !== -1
       })
-      // console.log(result)
       for (let r of result) {
         getContent(r)
       }
