@@ -13,9 +13,37 @@ function parsePage ($, el) {
   console.log('total page =', totalPage)
 }
 
+async function getSinglePage (pageNo) {
+  await request(`https://www.ptt.cc/bbs/AllTogether/index${pageNo}.html`).then(d => {
+    $ = cheerio.load(d)
+    let articles = $('.r-ent')
+
+    for (let i = 0; i < articles.length; i++) {
+      let a = articles[i]
+      result.push({
+        title: $(a).children('.title').text().trim(),
+        author: $(a).children('.meta').children('.author').text().trim(),
+        href: $(a).children('.title').children('a').attr('href'),
+        content: ''
+      })
+    }
+    // leave the 徵男
+    result = result.filter(r => {
+      return r.title.indexOf('[徵男]') !== -1
+    })
+    for (let r of result) {
+      getContent(r).then(str => {
+        r.content = str
+      }).catch(err => {
+        console.log(err)
+      })
+    }
+  })
+}
+
 async function getO2Index () {
   result = []
-  await request('https://www.ptt.cc/bbs/AllTogether/index3456.html').then(d => {
+  await request('https://www.ptt.cc/bbs/AllTogether/index.html').then(d => {
     $ = cheerio.load(d)
     let articles = $('.r-ent')
     let links = $('#action-bar-container .btn-group-paging a')
@@ -42,16 +70,17 @@ async function getO2Index () {
     })
     for (let r of result) {
       getContent(r).then(str => {
-        // console.log(str)
         r.content = str
       }).catch(err => {
         console.log(err)
       })
     }
+    // parse the previous 6 pages
+    for (let i = 1; i < 6; i++) {
+      getSinglePage(totalPage-i)
+    }
+
   })
-  setTimeout(() => {
-    console.log(result)
-  }, 1000)
 }
 
 async function getContent ({href}) {
@@ -65,4 +94,14 @@ async function getContent ({href}) {
   return content
 }
 
-getO2Index()
+function init () {
+  console.log('init')
+  getO2Index()
+  setTimeout(() => {
+    console.log(getResult())
+  },2000)
+}
+init()
+function getResult () {
+  return result
+}
