@@ -4,6 +4,7 @@ var cheerio = require('cheerio')
 let result = []
 let content = []
 let totalPage = 0
+const KEYWORD_OF_TITLE = '[徵男]'
 
 function parsePage ($, el) {
   let str = $(el).attr('href')
@@ -13,8 +14,9 @@ function parsePage ($, el) {
   console.log('total page =', totalPage)
 }
 
-async function getSinglePage (pageNo) {
-  await request(`https://www.ptt.cc/bbs/AllTogether/index${pageNo}.html`).then(d => {
+function getSinglePage (pageNo) {
+  let url = 'https://www.ptt.cc/bbs/AllTogether/index' + pageNo + '.html' 
+  request(url).then(d => {
     $ = cheerio.load(d)
     let articles = $('.r-ent')
 
@@ -29,21 +31,26 @@ async function getSinglePage (pageNo) {
     }
     // leave the 徵男
     result = result.filter(r => {
-      return r.title.indexOf('[徵男]') !== -1
+      return r.title.indexOf(KEYWORD_OF_TITLE) !== -1
     })
     for (let r of result) {
-      getContent(r).then(str => {
-        r.content = str
+      getContent(r).then(d => {
+        $ = cheerio.load(d)
+        r.content = $('#main-content').text()
       }).catch(err => {
+        console.log('error when get single content on page', pageNo)
         console.log(err)
       })
     }
+  }).catch(err => {
+    console.log('error when parsing page', pageNo)
+    console.log(err)
   })
 }
 
-async function getO2Index () {
+function getO2Index () {
   result = []
-  await request('https://www.ptt.cc/bbs/AllTogether/index.html').then(d => {
+  request('https://www.ptt.cc/bbs/AllTogether/index.html').then(d => {
     $ = cheerio.load(d)
     let articles = $('.r-ent')
     let links = $('#action-bar-container .btn-group-paging a')
@@ -66,12 +73,14 @@ async function getO2Index () {
     }
     // leave the 徵男
     result = result.filter(r => {
-      return r.title.indexOf('[徵男]') !== -1
+      return r.title.indexOf(KEYWORD_OF_TITLE) !== -1
     })
     for (let r of result) {
-      getContent(r).then(str => {
-        r.content = str
+      getContent(r).then(d => {
+        $ = cheerio.load(d)
+        r.content = $('#main-content').text()
       }).catch(err => {
+        console.log('error when get single content on index')
         console.log(err)
       })
     }
@@ -79,29 +88,26 @@ async function getO2Index () {
     for (let i = 1; i < 6; i++) {
       getSinglePage(totalPage-i)
     }
-
-  })
-}
-
-async function getContent ({href}) {
-  let content = ''
-  await request('http://www.ptt.cc' + href).then(d => {
-    $ = cheerio.load(d)
-    content = $('#main-content').text()
   }).catch(err => {
+    console.log('error when parse index')
     console.log(err)
   })
-  return content
 }
 
-function init () {
-  console.log('init')
-  getO2Index()
-  setTimeout(() => {
-    console.log(getResult())
-  },2000)
+function getContent ({href}) {
+  let url = 'http://www.ptt.cc' + href
+  return request(url)
 }
-init()
+
 function getResult () {
   return result
 }
+
+getO2Index()
+setTimeout(() => {
+  let data = getResult()
+  for(let d of data) {
+    console.log(d.content)
+  }
+  console.log("Total article = ", result.length)
+}, 3000)
